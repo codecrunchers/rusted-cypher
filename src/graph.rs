@@ -120,17 +120,10 @@ impl GraphClient {
         });
 
         headers.set(ContentType::json());
-        let server_root = format!(
-            "{}://{}:{}",
-            schema,
-            host.unwrap_or("localhost"),
-            port.unwrap_or(7474)
-        );
-        println!("server_root {}", server_root);
         let client = Client::new();
-        println!("HOST:  {}", url.host_str().unwrap());
+
         let mut res = client
-            .get(server_root.as_str())
+            .get(endpoint)
             .headers(headers.clone())
             .send()
             .map_err(|e| {
@@ -138,12 +131,16 @@ impl GraphClient {
                 e
             })?;
 
-        println!("Response {:?}", &res);
+        //println!("Response {:?}", &res);
 
         let service_root = decode_service_root(&mut res)?;
 
         let neo4j_version = Version::parse(&service_root.neo4j_version)?;
-        let cypher_endpoint = Url::parse(&service_root.transaction)?;
+        let cypher_endpoint = Url::parse(
+            &service_root
+                .transaction
+                .replace("{databaseName}", database.as_ref()),
+        )?;
 
         let cypher = Cypher::new(cypher_endpoint, client, headers.clone());
 

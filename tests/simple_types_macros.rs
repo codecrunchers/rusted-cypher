@@ -1,14 +1,15 @@
 #[macro_use]
 extern crate rusted_cypher;
 
-use rusted_cypher::GraphClient;
 use rusted_cypher::cypher::result::Row;
+use rusted_cypher::GraphClient;
 
 const URI: &'static str = "http://neo4j:neo4j@127.0.0.1:7474/db/data";
+const DBNAME: &'static str = "neo4j";
 
 #[test]
 fn without_params() {
-    let graph = GraphClient::connect(URI).unwrap();
+    let graph = GraphClient::connect(URI, DBNAME).unwrap();
 
     let stmt = cypher_stmt!("MATCH (n:INTG_TEST_MACROS_1) RETURN n").unwrap();
 
@@ -18,7 +19,7 @@ fn without_params() {
 
 #[test]
 fn save_retrive_values() {
-    let graph = GraphClient::connect(URI).unwrap();
+    let graph = GraphClient::connect(URI, DBNAME).unwrap();
 
     let stmt = cypher_stmt!(
         "CREATE (n:INTG_TEST_MACROS_2 {name: {name}, level: {level}, safe: {safe}}) RETURN n.name, n.level, n.safe", {

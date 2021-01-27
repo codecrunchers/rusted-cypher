@@ -40,10 +40,6 @@ fn send_query(
         json_ser::to_string_pretty(&json).unwrap_or(String::new())
     );
 
-    println!(
-        "Sending Query {}",
-        json_ser::to_string_pretty(&json).unwrap_or(String::new())
-    );
     req.send().map_err(From::from)
 }
 
