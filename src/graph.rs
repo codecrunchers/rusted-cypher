@@ -98,12 +98,17 @@ pub struct GraphClient {
 }
 
 impl GraphClient {
-    pub fn connect<T: AsRef<str>>(endpoint: T) -> Result<Self, GraphError> {
+    pub fn connect<T: AsRef<str>>(endpoint: T, database: T) -> Result<Self, GraphError> {
         let endpoint = endpoint.as_ref();
         let url = Url::parse(endpoint).map_err(|e| {
             error!("Unable to parse URL");
             e
         })?;
+
+        let schema = url.scheme();
+        let host = url.host_str();
+        let port = url.port();
+        let path = url.path();
 
         let mut headers = Headers::new();
 
@@ -115,12 +120,17 @@ impl GraphClient {
         });
 
         headers.set(ContentType::json());
-
+        let server_root = format!(
+            "{}://{}:{}",
+            schema,
+            host.unwrap_or("localhost"),
+            port.unwrap_or(7474)
+        );
+        println!("server_root {}", server_root);
         let client = Client::new();
         println!("HOST:  {}", url.host_str().unwrap());
         let mut res = client
-            .get("http://neo4j:password@localhost:7474/")
-            //            .get(url.host_str().unwrap())
+            .get(server_root.as_str())
             .headers(headers.clone())
             .send()
             .map_err(|e| {
@@ -179,10 +189,11 @@ mod tests {
     use super::*;
 
     const URL: &'static str = "http://localhost:7474/";
+    const DBNAME: &'static str = "neo4j";
 
     #[test]
     fn connect() {
-        let graph = GraphClient::connect(URL);
+        let graph = GraphClient::connect(URL, DBNAME);
         assert!(graph.is_ok());
         let graph = graph.unwrap();
         assert!(graph.neo4j_version().major >= 2);
@@ -190,7 +201,7 @@ mod tests {
 
     #[test]
     fn query() {
-        let graph = GraphClient::connect(URL).unwrap();
+        let graph = GraphClient::connect(URL, DBNAME).unwrap();
 
         let mut query = graph.query();
         query.add_statement("MATCH (n) RETURN n");
@@ -203,7 +214,7 @@ mod tests {
 
     #[test]
     fn transaction() {
-        let graph = GraphClient::connect(URL).unwrap();
+        let graph = GraphClient::connect(URL, DBNAME).unwrap();
 
         let (transaction, result) = graph
             .transaction()
