@@ -1,13 +1,13 @@
 //! Error types returned by the `GraphClient`
 
+use hyper;
+//use semver::SemVerError;
+use serde_json;
 use std::error::Error;
 use std::fmt;
-use std::string::FromUtf8Error;
 use std::io;
-use hyper;
-use serde_json;
+use std::string::FromUtf8Error;
 use time;
-use semver::SemVerError;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Neo4jError {
@@ -56,9 +56,11 @@ quick_error! {
         TimeParse(err: time::ParseError) {
             from()
         }
-        SemVer(err: SemVerError) {
+
+        SemVer(err: semver::SemVerError){
             from()
         }
+
         Other(err: String) {
             from()
         }
