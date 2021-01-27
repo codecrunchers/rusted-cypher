@@ -57,34 +57,24 @@
 //! }
 //! ```
 
+use hyper::header::{Authorization, Basic, ContentType, Headers};
+use hyper::{Client, Url};
+use semver::Version;
+use serde_json::value as json_value;
+use serde_json::{self, Value};
 use std::collections::BTreeMap;
 use std::io::Read;
-use hyper::{Client, Url};
-use hyper::header::{Authorization, Basic, ContentType, Headers};
-use serde_json::{self, Value};
-use serde_json::value as json_value;
-use semver::Version;
 
-use cypher::{Cypher, CypherQuery, CypherResult};
-use cypher::transaction::{Transaction, Created as TransactionCreated};
 use cypher::statement::Statement;
+use cypher::transaction::{Created as TransactionCreated, Transaction};
+use cypher::{Cypher, CypherQuery, CypherResult};
 use error::GraphError;
 
 #[derive(Deserialize)]
 pub struct ServiceRoot {
-    pub extensions: BTreeMap<String, Value>,
-    pub node: String,
-    pub node_index: String,
-    pub relationship_index: String,
-    pub extensions_info: String,
-    pub relationship_types: String,
-    pub batch: String,
-    pub cypher: String,
-    pub indexes: String,
-    pub constraints: String,
     pub transaction: String,
-    pub node_labels: String,
     pub neo4j_version: String,
+    pub neo4j_edition: String,
 }
 
 fn decode_service_root<R: Read>(reader: &mut R) -> Result<ServiceRoot, GraphError> {
@@ -92,12 +82,11 @@ fn decode_service_root<R: Read>(reader: &mut R) -> Result<ServiceRoot, GraphErro
 
     if let Some(errors) = result.get("errors") {
         if errors.as_array().map(|a| a.len()).unwrap_or(0) > 0 {
-            return Err(GraphError::Neo4j(json_value::from_value(errors.clone())?))
+            return Err(GraphError::Neo4j(json_value::from_value(errors.clone())?));
         }
     }
 
-    json_value::from_value(result)
-        .map_err(From::from)
+    json_value::from_value(result).map_err(From::from)
 }
 
 #[allow(dead_code)]
@@ -111,33 +100,35 @@ pub struct GraphClient {
 impl GraphClient {
     pub fn connect<T: AsRef<str>>(endpoint: T) -> Result<Self, GraphError> {
         let endpoint = endpoint.as_ref();
-        let url = Url::parse(endpoint)
-            .map_err(|e| {
-                error!("Unable to parse URL");
-                e
-            })?;
+        let url = Url::parse(endpoint).map_err(|e| {
+            error!("Unable to parse URL");
+            e
+        })?;
 
         let mut headers = Headers::new();
 
         url.password().map(|password| {
-            headers.set(Authorization(
-                Basic {
-                    username: url.username().to_owned(),
-                    password: Some(password.to_owned()),
-                }
-            ));
+            headers.set(Authorization(Basic {
+                username: url.username().to_owned(),
+                password: Some(password.to_owned()),
+            }));
         });
 
         headers.set(ContentType::json());
 
         let client = Client::new();
-        let mut res = client.get(endpoint)
+        println!("HOST:  {}", url.host_str().unwrap());
+        let mut res = client
+            .get("http://neo4j:password@localhost:7474/")
+            //            .get(url.host_str().unwrap())
             .headers(headers.clone())
             .send()
             .map_err(|e| {
                 error!("Unable to connect to server: {}", &e);
                 e
             })?;
+
+        println!("Response {:?}", &res);
 
         let service_root = decode_service_root(&mut res)?;
 
@@ -187,7 +178,7 @@ impl GraphClient {
 mod tests {
     use super::*;
 
-    const URL: &'static str = "http://neo4j:neo4j@localhost:7474/db/data";
+    const URL: &'static str = "http://localhost:7474/";
 
     #[test]
     fn connect() {
@@ -214,7 +205,8 @@ mod tests {
     fn transaction() {
         let graph = GraphClient::connect(URL).unwrap();
 
-        let (transaction, result) = graph.transaction()
+        let (transaction, result) = graph
+            .transaction()
             .with_statement("MATCH (n) RETURN n")
             .begin()
             .unwrap();
