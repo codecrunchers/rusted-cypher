@@ -67,7 +67,7 @@ use std::io::Read;
 
 use cypher::statement::Statement;
 use cypher::transaction::{Created as TransactionCreated, Transaction};
-use cypher::{Cypher, CypherQuery, CypherResult};
+use cypher::{Cypher, CypherGraphResult, CypherQuery};
 use error::GraphError;
 
 #[derive(Deserialize)]
@@ -161,7 +161,7 @@ impl GraphClient {
     ///
     /// Parameter can be anything that implements `Into<Statement>`, `Into<String>` or `Statement`
     /// itself
-    pub fn exec<S: Into<Statement>>(&self, statement: S) -> Result<CypherResult, GraphError> {
+    pub fn exec<S: Into<Statement>>(&self, statement: S) -> Result<CypherGraphResult, GraphError> {
         self.cypher.exec(statement)
     }
 

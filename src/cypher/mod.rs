@@ -4,7 +4,7 @@ pub mod result;
 pub mod statement;
 pub mod transaction;
 
-pub use self::result::CypherResult;
+pub use self::result::CypherGraphResult;
 pub use self::statement::Statement;
 pub use self::transaction::Transaction;
 
@@ -105,7 +105,7 @@ impl Cypher {
     ///
     /// Parameter can be anything that implements `Into<Statement>`, `Into<String>` or `Statement`
     /// itself
-    pub fn exec<S: Into<Statement>>(&self, statement: S) -> Result<CypherResult, GraphError> {
+    pub fn exec<S: Into<Statement>>(&self, statement: S) -> Result<CypherGraphResult, GraphError> {
         self.query()
             .with_statement(statement)
             .send()?
@@ -157,7 +157,7 @@ impl<'a> CypherQuery<'a> {
     ///
     /// The statements contained in the query are sent to the server and the results are parsed
     /// into a `Vec<CypherResult>` in order to match the response of the neo4j api.
-    pub fn send(self) -> Result<Vec<CypherResult>, GraphError> {
+    pub fn send(self) -> Result<Vec<CypherGraphResult>, GraphError> {
         let mut res = send_query(
             self.cypher.client(),
             &self.cypher.endpoint_commit(),

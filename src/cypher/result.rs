@@ -1,22 +1,23 @@
 use serde::de::DeserializeOwned;
 use serde_json;
 use serde_json::value::Value;
+use std::collections::HashMap;
 
 use ::error::{GraphError, Neo4jError};
 
 pub trait ResultTrait {
-    fn results(&self) -> &Vec<CypherResult>;
+    fn results(&self) -> &Vec<CypherGraphResult>;
     fn errors(&self) -> &Vec<Neo4jError>;
 }
 
 #[derive(Debug, Deserialize)]
 pub struct QueryResult {
-    pub results: Vec<CypherResult>,
+    pub results: Vec<CypherGraphResult>,
     pub errors: Vec<Neo4jError>,
 }
 
 impl ResultTrait for QueryResult {
-    fn results(&self) -> &Vec<CypherResult> {
+    fn results(&self) -> &Vec<CypherGraphResult> {
         &self.results
     }
 
@@ -26,13 +27,13 @@ impl ResultTrait for QueryResult {
 }
 
 /// Holds a single row of the result of a cypher query
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RowResult {
     row: Vec<Value>,
 }
 
 /// Holds the result of a cypher query
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CypherResult {
     pub columns: Vec<String>,
     pub data: Vec<RowResult>,
@@ -118,6 +119,42 @@ impl<'a> Iterator for Rows<'a> {
             Row::new(self.columns.as_ref(), data.row.as_ref())
         })
     }
+}
+
+//Alan Extend for Graph Response Format
+//
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CypherGraphResult {
+    pub columns: Vec<String>,
+    pub data: Vec<CypherGraphNode>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CypherGraphNode {
+    graph: CypherGraphNodeObj,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CypherGraphNodeObj {
+    nodes: Vec<CNode>,
+    relationships: Vec<CypherRelationship>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CNode {
+    id: String,
+    labels: Vec<String>,
+    properties: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CypherRelationship {
+    id: String,
+    r#type: String,
+    startNode: String,
+    endNode: String,
+    properties: HashMap<String, String>,
 }
 
 #[cfg(test)]

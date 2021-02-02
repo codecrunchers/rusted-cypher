@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
-use serde::Serialize;
 use serde::de::DeserializeOwned;
-use serde_json::{self, Value};
+use serde::Serialize;
 use serde_json::error::Error as JsonError;
+use serde_json::{self, Value};
+use std::collections::BTreeMap;
 
 /// Helper macro to simplify the creation of complex statements
 ///
@@ -58,13 +58,15 @@ macro_rules! cypher_stmt {
 pub struct Statement {
     statement: String,
     parameters: BTreeMap<String, Value>,
+    resultDataContents: Vec<String>,
 }
 
-impl Statement  {
+impl Statement {
     pub fn new<T: Into<String>>(statement: T) -> Self {
         Statement {
             statement: statement.into(),
             parameters: BTreeMap::new(),
+            resultDataContents: vec!["graph".into()],
         }
     }
 
@@ -78,9 +80,12 @@ impl Statement  {
     /// The parameter value is serialized into a `Value`. Since the serialization can fail, the
     /// method returns a `Result`
     pub fn add_param<K, V>(&mut self, key: K, value: V) -> Result<(), JsonError>
-        where K: Into<String>, V: Serialize + Copy
+    where
+        K: Into<String>,
+        V: Serialize + Copy,
     {
-        self.parameters.insert(key.into(), serde_json::value::to_value(&value)?);
+        self.parameters
+            .insert(key.into(), serde_json::value::to_value(&value)?);
         Ok(())
     }
 
@@ -103,7 +108,9 @@ impl Statement  {
     /// # }
     /// ```
     pub fn with_param<K, V>(mut self, key: K, value: V) -> Result<Self, JsonError>
-        where K: Into<String>, V: Serialize + Copy
+    where
+        K: Into<String>,
+        V: Serialize + Copy,
     {
         self.add_param(key, value)?;
         Ok(self)
@@ -113,8 +120,13 @@ impl Statement  {
     ///
     /// Returns `None` if there is no parameter with the given name or `Some(serde_json::error::Error)``
     /// if the parameter cannot be converted back from `serde_json::value::Value`
-    pub fn param<T: DeserializeOwned>(&self, key: &str) -> Option<Result<T, serde_json::error::Error>> {
-        self.parameters.get(key).map(|v| serde_json::value::from_value(v.clone()))
+    pub fn param<T: DeserializeOwned>(
+        &self,
+        key: &str,
+    ) -> Option<Result<T, serde_json::error::Error>> {
+        self.parameters
+            .get(key)
+            .map(|v| serde_json::value::from_value(v.clone()))
     }
 
     /// Gets a reference to the underlying parameters `BTreeMap`
@@ -123,9 +135,10 @@ impl Statement  {
     }
 
     /// Sets the parameters `BTreeMap`, overriding current values
-    pub fn set_parameters<T: Serialize>(&mut self, params: &BTreeMap<String, T>)
-        -> Result<(), JsonError>
-    {
+    pub fn set_parameters<T: Serialize>(
+        &mut self,
+        params: &BTreeMap<String, T>,
+    ) -> Result<(), JsonError> {
         let mut parameters = BTreeMap::new();
         for (k, v) in params {
             parameters.insert(k.to_owned(), serde_json::value::to_value(v)?);
@@ -169,10 +182,14 @@ mod tests {
     #[test]
     fn with_param() {
         let statement = Statement::new("MATCH n RETURN n")
-            .with_param("param1", "value1").unwrap()
-            .with_param("param2", 2).unwrap()
-            .with_param("param3", 3.0).unwrap()
-            .with_param("param4", [0; 4]).unwrap();
+            .with_param("param1", "value1")
+            .unwrap()
+            .with_param("param2", 2)
+            .unwrap()
+            .with_param("param3", 3.0)
+            .unwrap()
+            .with_param("param4", [0; 4])
+            .unwrap();
 
         assert_eq!(statement.parameters().len(), 4);
     }
@@ -191,10 +208,14 @@ mod tests {
     #[test]
     fn remove_param() {
         let mut statement = Statement::new("MATCH n RETURN n")
-            .with_param("param1", "value1").unwrap()
-            .with_param("param2", 2).unwrap()
-            .with_param("param3", 3.0).unwrap()
-            .with_param("param4", [0; 4]).unwrap();
+            .with_param("param1", "value1")
+            .unwrap()
+            .with_param("param2", 2)
+            .unwrap()
+            .with_param("param3", 3.0)
+            .unwrap()
+            .with_param("param4", [0; 4])
+            .unwrap();
 
         statement.remove_param("param1");
 
@@ -211,12 +232,14 @@ mod tests {
     fn macro_single_param() {
         let statement1 = cypher_stmt!("MATCH n RETURN n", {
             "name" => "test"
-        }).unwrap();
+        })
+        .unwrap();
 
         let param = 1;
         let statement2 = cypher_stmt!("MATCH n RETURN n", {
             "value" => param
-        }).unwrap();
+        })
+        .unwrap();
 
         assert_eq!("test", statement1.param::<String>("name").unwrap().unwrap());
         assert_eq!(param, statement2.param::<i32>("value").unwrap().unwrap());
@@ -229,7 +252,8 @@ mod tests {
             "param1" => "one",
             "param2" => 2,
             "param3" => param
-        }).unwrap();
+        })
+        .unwrap();
 
         assert_eq!("one", statement.param::<String>("param1").unwrap().unwrap());
         assert_eq!(2, statement.param::<i32>("param2").unwrap().unwrap());
