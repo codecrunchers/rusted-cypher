@@ -124,7 +124,7 @@ impl<'a> Iterator for Rows<'a> {
 //Alan Extend for Graph Response Format
 //
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct CypherGraphResult {
     pub columns: Vec<String>,
     pub data: Vec<CypherGraphNode>,
@@ -132,29 +132,35 @@ pub struct CypherGraphResult {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CypherGraphNode {
-    graph: CypherGraphNodeObj,
+    pub graph: CypherGraphNodeObj,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CypherGraphNodeObj {
-    nodes: Vec<CNode>,
-    relationships: Vec<CypherRelationship>,
+    pub nodes: Vec<CNode>,
+    pub relationships: Vec<CypherRelationship>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CNode {
-    id: String,
-    labels: Vec<String>,
-    properties: HashMap<String, String>,
+    pub id: String,
+    pub labels: Vec<String>,
+    pub properties: HashMap<String, Value>,
+}
+
+impl PartialEq for CNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CypherRelationship {
-    id: String,
-    r#type: String,
-    startNode: String,
-    endNode: String,
-    properties: HashMap<String, String>,
+    pub id: String,
+    pub r#type: String,
+    pub startNode: String,
+    pub endNode: String,
+    pub properties: HashMap<String, Value>,
 }
 
 #[cfg(test)]
